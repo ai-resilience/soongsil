@@ -1,0 +1,8 @@
+.ipynb_checkpoints/
+*.ckpt
+./Brainwash/data/cifar-100-python.tar.gz
+./Brainwash/data/cifar-100-python/train
+./Brainwash/noise_ewc_reckless_test__delta_0.3_dataset_split_cifar100_target_task_0_attacked_task_9_noise_optim_lr_0.005__n_iters_1_n_epochs_5000_seed_0_mode_reckless____min_acc_target_35.pkl
+./.git/objects/e0/2c80e2d56dd054787a012c96e545d65d55f92b
+./.git/objects/da/885e55b3313790a9a2fadf1d392f43ee77cac3
+./.git/objects/3e/945ecf7ca718a81bb8595a4a31af40fc118ac8
