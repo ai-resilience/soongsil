@@ -7,34 +7,37 @@ import re
 import random
 import os
 
-client = OpenAI(api_key="")
-# --- 1. 단계별 명령어 정의 ---
-# 사용자가 제공한 명령어들을 딕셔너리 형태로 저장합니다.
+# OpenAI 클라이언트 초기화. API 키를 환경 변수나 다른 보안 방법으로 관리하는 것을 권장합니다.
+# 예: client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key="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") # 실제 API 키를 이곳에 입력하거나 환경 변수를 사용하세요.
 
 def run_script_and_get_output(command: str, step_title: str) -> str:
     """
     주어진 셸 명령어를 실행하고, 표준 출력을 문자열로 반환합니다.
     오류가 발생하면 오류 메시지를 반환합니다.
     """
-    print(f"---  {step_title} 실행 시작 ---")
+    print(f"--- {step_title} 실행 시작 ---")
     print(f"실행 명령어: {command}")
     
     try:
+        # 셸 명령어를 실행하고 출력을 캡처합니다.
         result = subprocess.run(
             command, shell=True, capture_output=True, text=True,
             check=True, encoding='utf-8'
         )
-        print("---  실행 성공 ---")
+        print("--- 실행 성공 ---")
         return result.stdout
     
     except subprocess.CalledProcessError as e:
-        print("---  실행 중 오류 발생 ---")
+        # 명령어 실행 중 오류가 발생한 경우
+        print("--- 실행 중 오류 발생 ---")
         error_message = (f"명령어 실행에 실패했습니다 (Exit Code: {e.returncode}).\n"
                          f"--- STDOUT ---\n{e.stdout}\n"
                          f"--- STDERR ---\n{e.stderr}\n")
         return error_message
     except Exception as e:
-        print(f"---  알 수 없는 오류 발생 ---")
+        # 기타 예외 처리
+        print(f"--- 알 수 없는 오류 발생 ---")
         return f"스크립트 실행 중 예외가 발생했습니다: {e}"
 
 def format_matrix_as_table(matrix: List[List[float]], num_tasks: int) -> str:
@@ -59,11 +62,11 @@ def analyze_result_with_gpt(log_output: str, step_title: str) -> Union[dict, Non
     스크립트 실행 결과를 GPT API로 보내 구조화된 데이터(JSON) 분석을 요청하고,
     결과를 표로 출력하며 파싱된 딕셔너리를 반환합니다.
     """
-    if not client:
-        print("OpenAI 클라이언트가 없어 GPT 분석을 건너뜁니다.")
+    if not client or client.api_key == "YOUR_API_KEY":
+        print("OpenAI API 키가 설정되지 않아 GPT 분석을 건너뜁니다.")
         return None
         
-    print(f"\n---  {step_title} GPT 결과 분석 시작 ---")
+    print(f"\n--- {step_title} GPT 결과 분석 시작 ---")
     
     prompt = f"""
     당신은 머신러닝 결과 분석 전문가입니다.
@@ -123,32 +126,36 @@ def analyze_result_with_gpt(log_output: str, step_title: str) -> Union[dict, Non
         return {"error": str(e)}
 
 if __name__ == '__main__':
+    # --- 실행할 명령어 단계별 정의 ---
     commands_to_run = {
-        "단계 1/4: 초기 모델 학습": "CUDA_VISIBLE_DEVICES=1 python /home/jun/work/continual-learning-baselines/test_jun/Brainwash/ewc_barinwash_trian.py --experiment split_cifar100 --approach ewc --lasttask 9 --tasknum 10 --nepochs 20 --batch-size 16 --lamb 500000 --lamb_emp 100 --clip 100. --lr 0.01",
-        "단계 2/4: Inverse Attack": "python /home/jun/work/Brainwash/main_inv.py --pretrained_model_add=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/ewc_lamb_500000.0_dataset_split_cifar100_seed_0_task_num_9.pkl --task_lst=0,1,2,3,4,5,6,7,8 --num_samples=128 --save_dir=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/model_inv --save_every=1000 --batch_reg --init_acc --n_iters=10000",
-        "단계 3/4: Brainwash (Cautious)": "CUDA_VISIBLE_DEVICES=0 python /home/jun/work/Brainwash/main_brainwash.py --extra_desc=cautious_test --pretrained_model_add=/home/jun/work/Brainwash/afec_ewc_lamb_500000.0_lambemp_100.0__model_type_resnet_dataset_split_cifar100_class_num_10_bs_16_lr_0.01_n_epochs_20__model_name_ResNet_task_num_9__seed_0_emb_fact_1_im_sz_32__last_task_9___.pkl --mode='cautious' --target_task_for_eval=0 --delta=0.3 --seed=0 --eval_every=10 --distill_folder=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/model_inv --init_acc --noise_norm=inf --cont_learner_lr=0.001 --n_epochs=5000 --save_every=100 --w_cur=1",
-        "단계 4/4: 최종 평가": "CUDA_VISIBLE_DEVICES=0 python /home/jun/work/Brainwash/main_baselines.py --experiment split_cifar100 --approach ewc --lasttask 9 --tasknum 10 --nepochs 20 --batch-size 16 --lr 0.01 --clip 100. --lamb 500000 --lamb_emp 100 --checkpoint /home/jun/work/Agent/noise_ewc_reckless_test__delta_0.3_dataset_split_cifar100_target_task_0_attacked_task_9_noise_optim_lr_0.005__n_iters_1_n_epochs_5000_seed_0_mode_reckless____min_acc_target_10.pkl --init_acc --addnoise"
+        "단계 1/5: 초기 모델 학습 (EWC)": "CUDA_VISIBLE_DEVICES=1 python /home/jun/work/soongsil/continual-learning-baselines/test_jun/Brainwash/ewc_barinwash_trian.py --experiment split_cifar100 --approach ewc --lasttask 9 --tasknum 10 --nepochs 20 --batch-size 16 --lamb 500000 --lamb_emp 100 --clip 100. --lr 0.01",
+        "단계 2/5: Inverse Attack 수행": "python /home/jun/work/soongsil/Brainwash/main_inv.py --pretrained_model_add=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/ewc_lamb_500000.0_dataset_split_cifar100_seed_0_task_num_9.pkl --task_lst=0,1,2,3,4,5,6,7,8 --num_samples=128 --save_dir=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/model_inv --save_every=1000 --batch_reg --init_acc --n_iters=10000",
+        "단계 3/5: Brainwash (Reckless Mode) 적용": "CUDA_VISIBLE_DEVICES=0 python /home/jun/work/Brainwash/main_brainwash.py --extra_desc=reckless_test --pretrained_model_add=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/ewc_lamb_500000.0_dataset_split_cifar100_seed_0_task_num_9.pkl --mode='reckless' --target_task_for_eval=0 --delta=0.3 --seed=0 --eval_every=10 --distill_folder=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/model_inv --init_acc --noise_norm=inf --cont_learner_lr=0.001 --n_epochs=5000 --save_every=100",
+        "단계 4/5: Brainwash (Cautious Mode) 적용": "CUDA_VISIBLE_DEVICES=0 python main_brainwash.py --extra_desc=cautious_test --pretrained_model_add=/home/jun/work/soongsil/Agent/noise_ewc_wcur_1.0_cautious_test__delta_0.3_dataset_split_cifar100_target_task_0_attacked_task_9_noise_optim_lr_0.005__n_iters_1_n_epochs_5000_seed_0_mode_cautious__w_cur_1.0___min_acc_target_9.pkl --mode='cautious' --target_task_for_eval=0 --delta=0.3 --seed=0 --eval_every=10 --distill_folder=/home/jun/work/continual-learning-baselines/test_jun/Brainwash/model_inv --init_acc --noise_norm=inf --cont_learner_lr=0.001 --n_epochs=5000 --save_every=100 --w_cur=1",
+        "단계 5/5: 최종 평가": "CUDA_VISIBLE_DEVICES=0 python /home/jun/work/soongsil/Brainwash/main_baselines.py --experiment split_cifar100 --approach ewc --lasttask 9 --tasknum 10 --nepochs 20 --batch-size 16 --lr 0.01 --clip 100. --lamb 500000 --lamb_emp 100 --checkpoint /home/jun/work/soongsil/Agent/noise_ewc_wcur_1.0_cautious_test__delta_0.3_dataset_split_cifar100_target_task_0_attacked_task_9_noise_optim_lr_0.005__n_iters_1_n_epochs_5000_seed_0_mode_cautious__w_cur_1.0___min_acc_target_9.pkl --init_acc --addnoise"
     }
 
     all_gpt_analyses = {}
 
+    # 정의된 각 명령어를 순차적으로 실행
     for step_title, command in commands_to_run.items():
         print("\n" + "="*60)
         script_output = run_script_and_get_output(command, step_title)
         
         if script_output:
-            print(f"\n---  스크립트 전체 실행 로그 ({step_title}) ---")
+            print(f"\n--- 스크립트 전체 실행 로그 ({step_title}) ---")
             print(script_output)
             print("---------------------------------")
             
+            # 실행 결과를 GPT로 분석
             analysis_result = analyze_result_with_gpt(script_output, step_title)
             
             if analysis_result:
                 all_gpt_analyses[step_title] = analysis_result
 
+    # 모든 분석 결과를 JSON 파일로 저장
     try:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"analysis_log.json"
+        filename = "analysis_log.json"
         
         print("\n" + "="*60)
         print(f"GPT 분석 결과를 {filename} 파일로 저장합니다...")
@@ -156,10 +163,10 @@ if __name__ == '__main__':
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(all_gpt_analyses, f, ensure_ascii=False, indent=4)
             
-        print(f" 성공적으로 {filename}에 저장했습니다.")
+        print(f"성공적으로 {filename}에 저장했습니다.")
 
     except Exception as e:
-        print(f" 로그 파일 저장 중 오류가 발생했습니다: {e}")
+        print(f"로그 파일 저장 중 오류가 발생했습니다: {e}")
 
     print("\n" + "="*60)
-    print("\n---  모든 작업 완료 ---")
+    print("\n--- 모든 작업 완료 ---")
