@@ -1,10 +1,10 @@
-🧠 Backdoor Attack & Continual Learning Framework
-📘 Overview
+ Backdoor Attack & Continual Learning Framework
+ Overview
 
 This repository provides a modular experimental framework for studying backdoor attacks and continual learning in deep neural networks.
 It enables researchers to simulate various backdoor injection strategies, evaluate model robustness, and test defense or detection mechanisms in continual learning environments.
 
-📂 Directory Structure
+ Directory Structure
 .
 ├── AccumulativeAttack/          # Implementation of accumulative (progressive) backdoor attacks
 ├── Agent/                       # Attack analysis utilities (recently removed analyze_attack.py)
@@ -17,7 +17,7 @@ It enables researchers to simulate various backdoor injection strategies, evalua
 ├── .gitignore                   # Git ignore rules
 ├── large_files.txt              # List of excluded large files
 
-⚙️ Key Features
+ Key Features
 Category	Description
 Backdoor Attacks	Implements multiple backdoor attack types such as AccumulativeAttack, Brainwash, and LabelFlipping.
 Detection & Defense	Includes a detection module under labelflipping/; easily extendable for new detection algorithms.
